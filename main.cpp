@@ -14,7 +14,7 @@
 using color_t = uint8_t[4];
 void(__cdecl* datapaths)(void) = nullptr;
 
-void init(HINSTANCE dll)
+unsigned long __stdcall init(void* dll)
 {
 	void(__cdecl* print)(const color_t&, const char*, ...) = nullptr;
 	auto tier0 = GetModuleHandleW(L"tier0.dll");
@@ -31,7 +31,6 @@ void init(HINSTANCE dll)
 	datapaths = reinterpret_cast<datapack_paths_t>(signature::search(client, signature::detail::convert("55 8B EC 8B 0D ?? ?? ?? ?? 83 EC 7C")));
 	// datapaths();
 
-	
 	globals::lua = interface::get<lua::Shared>(GetModuleHandleW(L"lua_shared.dll"), "LUASHARED");
 
 	auto chl = interface::get<void>(client, "VClient");
@@ -44,11 +43,11 @@ void init(HINSTANCE dll)
 	auto overlay = GetModuleHandleW(L"gameoverlayrenderer.dll");
 
 	void*& present = **reinterpret_cast<void***>(
-		signature::search(overlay, signature::detail::convert("FF 15 ?? ?? ?? ?? 8B F8 85 DB 74 1F")) + 2
+		signature::search(overlay, signature::detail::convert("8B F8 85 DB")) - 4
 	);
 
 	void*& reset   = **reinterpret_cast<void***>(
-		signature::search(overlay, signature::detail::convert("FF 15 ?? ?? ?? ?? 8B F8 85 FF 78 18")) + 2
+		signature::search(overlay, signature::detail::convert("C7 45 ?? ?? ?? ?? ?? FF 15 ?? ?? ?? ?? 8B F8")) + 9
 	);
 
 	original::present = *reinterpret_cast<decltype(&original::present)>(&present);
@@ -66,7 +65,7 @@ void init(HINSTANCE dll)
 
 	ImGui_ImplDX9_Shutdown();
 
-	return FreeLibraryAndExitThread(dll, 0);
+	FreeLibraryAndExitThread(HMODULE(dll), 0);
 }
 
 int __stdcall DllMain(HINSTANCE dll, DWORD reason, LPVOID)
@@ -74,7 +73,7 @@ int __stdcall DllMain(HINSTANCE dll, DWORD reason, LPVOID)
 	DisableThreadLibraryCalls(dll);
 	if (reason == DLL_PROCESS_ATTACH)
 	{
-		std::thread(init, dll).detach();
+		CreateThread(nullptr, 0, init, dll, 0, nullptr);
 	}
 
 	return 1;
