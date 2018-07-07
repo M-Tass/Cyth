@@ -230,7 +230,21 @@ inline void render()
 	auto list = ImGui::GetWindowDrawList();
 	{
 		list->AddText({ 100.f, 100.f }, 0xFFFFD2FF, "ENGAGED");
+		auto glua = globals::lua->create_interface(lua::type::client);
+		// next part fixes incorrect view matrix on servers that were previously buggy (still unknown if a specific addon causes this but seems it's not anticheat related)
+		if (glua) {
+			glua->PushSpecial(lua::special::glob);
+			glua->GetField(-1, "cam");
+			glua->GetField(-1, "Start3D");
+			glua->Call(0, 1);
+			glua->Pop();
+		}
 		auto& matrix = globals::engine->get_view_matrix();
+		if (glua) {
+			glua->GetField(-1, "End3D");
+			glua->Call(0, 1);
+			glua->Pop(3);
+		}
 		auto local = globals::engine->get_local_player();
 		for (size_t i = 1; i <= globals::engine->get_max_clients(); ++i)
 		{
